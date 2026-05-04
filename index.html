@@ -141,6 +141,18 @@ body{background:var(--bg);font-family:'Barlow Condensed',sans-serif;color:var(--
   font-size:13px;max-width:360px;width:100%;margin-bottom:28px;}
 .sh{text-align:right;}.sa{text-align:left;}
 .sl{color:rgba(255,255,255,.28);text-align:center;font-size:10px;letter-spacing:1px;}
+/* Mode Select */
+#msel{flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 50% 40%,#10102a 0%,#08080f 80%);gap:18px;padding:20px;}
+#msel h2{font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:4px;color:var(--accent);}
+#msel p{font-size:14px;letter-spacing:2px;color:rgba(255,255,255,.4);margin-top:-10px;}
+.mode-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;max-width:700px;width:100%;}
+.mode-card{background:rgba(255,255,255,.04);border:2px solid rgba(255,255,255,.1);border-radius:8px;
+  padding:18px 10px;text-align:center;cursor:pointer;transition:all .18s;}
+.mode-card:hover,.mode-card.sel{border-color:var(--accent);background:rgba(232,160,32,.12);transform:scale(1.05);}
+.mode-vs{font-family:'Bebas Neue',sans-serif;font-size:34px;color:var(--accent);}
+.mode-lbl{font-size:10px;letter-spacing:2px;color:rgba(255,255,255,.45);margin-top:3px;}
+.mode-ico{font-size:24px;margin-bottom:4px;}
 </style>
 </head>
 <body>
@@ -151,8 +163,7 @@ body{background:var(--bg);font-family:'Barlow Condensed',sans-serif;color:var(--
   <div class="gtitle"><span class="nba">NBA</span><span> 2K</span><span class="yr">26</span></div>
   <div class="msub">Street Court Edition</div>
   <button class="mbtn pr" onclick="showTSel()">QUICK GAME</button>
-  <button class="mbtn" onclick="showTSel()">PLAY NOW</button>
-  <div class="chint">
+  <button class="mbtn" onclick="showTSel()">PLAY NOW</button>  <div class="chint">
     <b>WASD</b> Move &nbsp;|&nbsp; <b>SPACE</b> Shoot (hold → release in green) &nbsp;|&nbsp; <b>SHIFT</b> Sprint<br>
     <b>E</b> Pass &nbsp;|&nbsp; <b>F</b> Dunk &nbsp;|&nbsp; <b>Z</b> Block/Steal &nbsp;|&nbsp; <b>Q</b> Dribble &nbsp;|&nbsp; <b>Click teammate</b> Switch
   </div>
@@ -164,7 +175,44 @@ body{background:var(--bg);font-family:'Barlow Condensed',sans-serif;color:var(--
   <div class="tgrid" id="tgrid"></div>
   <div class="tsbtns">
     <button class="mbtn" onclick="showMenu()">BACK</button>
-    <button class="mbtn pr" onclick="startGame()">PLAY</button>
+    <button class="mbtn pr" onclick="showMSel()">NEXT: MODE →</button>
+  </div>
+</div>
+
+<!-- MODE SELECT -->
+<div id="msel" class="screen">
+  <h2>SELECT GAME MODE</h2>
+  <p>CHOOSE YOUR MATCHUP</p>
+  <div class="mode-grid" id="modeGrid">
+    <div class="mode-card sel" onclick="pickMode(1)">
+      <div class="mode-ico">🏀</div>
+      <div class="mode-vs">1v1</div>
+      <div class="mode-lbl">ONE ON ONE</div>
+    </div>
+    <div class="mode-card" onclick="pickMode(2)">
+      <div class="mode-ico">🏀🏀</div>
+      <div class="mode-vs">2v2</div>
+      <div class="mode-lbl">DOUBLE TEAM</div>
+    </div>
+    <div class="mode-card" onclick="pickMode(3)">
+      <div class="mode-ico">⚡</div>
+      <div class="mode-vs">3v3</div>
+      <div class="mode-lbl">STREET BALL</div>
+    </div>
+    <div class="mode-card" onclick="pickMode(4)">
+      <div class="mode-ico">🔥</div>
+      <div class="mode-vs">4v4</div>
+      <div class="mode-lbl">SQUAD UP</div>
+    </div>
+    <div class="mode-card" onclick="pickMode(5)">
+      <div class="mode-ico">🏆</div>
+      <div class="mode-vs">5v5</div>
+      <div class="mode-lbl">FULL COURT</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px">
+    <button class="mbtn" onclick="showTSel()">BACK</button>
+    <button class="mbtn pr" onclick="startGame()">START GAME</button>
   </div>
 </div>
 
@@ -191,14 +239,12 @@ body{background:var(--bg);font-family:'Barlow Condensed',sans-serif;color:var(--
     </div>
     <div class="poss h" id="posH">▶ BALL</div>
     <div class="poss a" id="posA" style="display:none">BALL ◀</div>
-    <div id="switch-hint">CLICK TEAMMATE TO SWITCH</div>
+    <div id="switch-hint">E = PASS (offense) / SWITCH TEAMMATE (defense)</div>
   </div>
   <div id="albl"></div>
   <div id="notif"></div>
   <div id="stam-panel">
-    <div class="strow"><span class="stlbl">YOU</span><div class="stbg"><div class="stfil" id="sf0" style="width:100%"></div></div></div>
-    <div class="strow"><span class="stlbl">TM 1</span><div class="stbg"><div class="stfil" id="sf1" style="width:100%"></div></div></div>
-    <div class="strow"><span class="stlbl">TM 2</span><div class="stbg"><div class="stfil" id="sf2" style="width:100%"></div></div></div>
+    <!-- filled dynamically based on mode -->
   </div>
   <div id="dunk-wrap">
     <button id="dunk-btn" onclick="handleDunk()">
@@ -298,37 +344,47 @@ const CELEBRATIONS_DUNK=[
 // ═══════════════════════════════════════════════
 const QTR_TIME=5*60, SHOT_MAX=24, NUM_QTRS=4;
 
-// Speeds — everyone is FAST
-const P_SPD=210, P_SPRINT=290;       // player
-const TM_SPD=220, TM_SPRINT=295;     // teammates
-const OPP_SPD=225, OPP_SPRINT=300;   // opponents (slightly faster)
+// Speeds — AIs match player exactly
+const P_SPD=210, P_SPRINT=290;
+const TM_SPD=210, TM_SPRINT=290;   // same as player
+const OPP_SPD=210, OPP_SPRINT=290; // same as player
 
 // Stamina
 const SPRINT_DRAIN=20, STAM_REGEN=9;
-const STAM_MIN_SPRINT=12; // need this much stamina to sprint
+const STAM_MIN_SPRINT=12;
 
-// Shooting
-const SHOOT_IDEAL=0.58, SHOOT_MIN_WIN=0.06, SHOOT_MAX_WIN=0.20;
-const SHOOT_BASE_ACC=0.68;
+// Shooting — WAY harder
+const SHOOT_IDEAL=0.55, SHOOT_MIN_WIN=0.03, SHOOT_MAX_WIN=0.09;
+// green zone is tiny (3-9% of bar width). Outside it: near-miss.
 
 // AI
-const AI_REACT=0.14;
-// Teammate defense quality (enough to block/steal occasionally, not too good)
-const TM_STEAL_CHANCE=0.18, TM_BLOCK_CHANCE=0.30;
-// Opponent AI
-const OPP_STEAL_CHANCE=0.26, OPP_BLOCK_CHANCE=0.42;
-const OPP_BASE_ACC=0.70;
+const AI_REACT=0.10; // faster decisions
+const TM_STEAL_CHANCE=0.32, TM_BLOCK_CHANCE=0.28;
+const OPP_STEAL_CHANCE=0.42, OPP_BLOCK_CHANCE=0.30;
+// Steal range — must be RIGHT next to player
+const STEAL_RANGE=46;
+// Block range — must be DIRECTLY in front of shooter (tight)
+const BLOCK_RANGE_DIST=52;   // max dist from player
+const BLOCK_BALL_RANGE=55;   // max dist from ball arc
+const OPP_BASE_ACC=0.68;
 
-let selT=0, G={};
+let selT=0, G={}, selMode=3; // default 3v3
 
 // ═══════════════════════════════════════════════
 // SCREEN NAV
 // ═══════════════════════════════════════════════
 function showMenu(){ cancelAnimationFrame(G.raf); showScreen('menu'); }
 function showTSel(){ buildGrid(); showScreen('tsel'); }
+function showMSel(){ showScreen('msel'); }
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+}
+function pickMode(n){
+  selMode=n;
+  document.querySelectorAll('.mode-card').forEach((c,i)=>{
+    c.classList.toggle('sel',i===n-1);
+  });
 }
 function buildGrid(){
   const g=document.getElementById('tgrid'); g.innerHTML='';
@@ -362,6 +418,9 @@ function startGame(){
   document.getElementById('aName').textContent=away.abbr;
   document.getElementById('gHN').textContent=home.abbr;
   document.getElementById('gAN').textContent=away.abbr;
+  // Show mode in switch hint area
+  document.getElementById('switch-hint').textContent=
+    `${selMode}v${selMode}  |  E = PASS / SWITCH TEAMMATE`;
   resizeCv();
   G={
     home,away,
@@ -380,8 +439,8 @@ function startGame(){
     keys:{},
     shooting:false,shootPow:0,
     // stamina per entity stored on entity itself
-    aiTimers:[0,0,0,0,0], // for all 5 opponents
-    tmTimers:[0,0],        // for 2 teammates
+    aiTimers:[], aiPossTime:0,
+    tmTimers:[],
     aiPossTime:0,
     dunkCooldown:0,dunkAnim:null,
     dribBoost:0,
@@ -426,20 +485,56 @@ function mkEnt(x,y,team,spd,sprintSpd,rating){
 
 function initEntities(){
   const cx=G.cX+G.cW/2, cy=G.cY+G.cH/2;
-  // 3 home players (1 controlled + 2 teammates)
-  const p=mkEnt(cx-140,cy,'home',P_SPD,P_SPRINT,80);
+  const n=selMode; // players per side
+  const ch=G.cH;
+
+  // Spread positions vertically based on player count
+  function homePos(i,total){
+    const spread=ch*0.7;
+    const step=total>1?spread/(total-1):0;
+    const startY=cy-(total-1)*step/2;
+    return {x:cx-(130+i*30), y:startY+i*step};
+  }
+  function awayPos(i,total){
+    const spread=ch*0.7;
+    const step=total>1?spread/(total-1):0;
+    const startY=cy-(total-1)*step/2;
+    return {x:cx+(130+i*30), y:startY+i*step};
+  }
+
+  const hp=homePos(0,n);
+  const p=mkEnt(hp.x,hp.y,'home',P_SPD,P_SPRINT,80);
   p.hasBall=true;
-  const tm1=mkEnt(cx-230,cy-100,'home',TM_SPD,TM_SPRINT,74+Math.random()*12);
-  const tm2=mkEnt(cx-230,cy+100,'home',TM_SPD,TM_SPRINT,74+Math.random()*12);
-  // 3 away opponents
-  const op1=mkEnt(cx+110,cy,'away',OPP_SPD,OPP_SPRINT,76+Math.random()*18);
-  const op2=mkEnt(cx+190,cy-100,'away',OPP_SPD,OPP_SPRINT,76+Math.random()*18);
-  const op3=mkEnt(cx+190,cy+100,'away',OPP_SPD,OPP_SPRINT,76+Math.random()*18);
+
+  const tms=[];
+  for(let i=1;i<n;i++){
+    const pos=homePos(i,n);
+    tms.push(mkEnt(pos.x,pos.y,'home',TM_SPD,TM_SPRINT,72+Math.random()*14));
+  }
+
+  const opps=[];
+  for(let i=0;i<n;i++){
+    const pos=awayPos(i,n);
+    opps.push(mkEnt(pos.x,pos.y,'away',OPP_SPD,OPP_SPRINT,74+Math.random()*18));
+  }
+
   G.player=p;
-  G.teammates=[tm1,tm2];
-  G.opponents=[op1,op2,op3];
+  G.teammates=tms;
+  G.opponents=opps;
   G.ball.x=p.x; G.ball.y=p.y; G.ball.holder=p; G.ball.flying=false;
   G.poss='home';
+
+  // Build stamina panel for this mode
+  const panel=document.getElementById('stam-panel');
+  panel.innerHTML='';
+  const allHome=[p,...tms];
+  allHome.forEach((e,i)=>{
+    panel.innerHTML+=`<div class="strow"><span class="stlbl">${i===0?'YOU':'TM '+i}</span><div class="stbg"><div class="stfil" id="sf${i}" style="width:100%"></div></div></div>`;
+  });
+
+  // Expand AI timers array
+  G.aiTimers=new Array(n).fill(0);
+  G.tmTimers=new Array(Math.max(n-1,0)).fill(0);
 }
 
 // ═══════════════════════════════════════════════
@@ -575,33 +670,30 @@ function updateTeammateAI(dt){
 }
 
 function tmOffense(tm,i){
-  // Fixed wing/corner spots so teammates don't circle — they move to a spot and hold
+  // Generate evenly-spread wing spots based on total teammate count
   const cx=G.cX+G.cW/2, cy=G.cY+G.cH/2;
-  const offSpots=[
-    {x:cx+G.cW*0.08, y:G.cY+G.cH*0.18},   // top wing
-    {x:cx+G.cW*0.08, y:G.cY+G.cH*0.82},   // bottom wing
-    {x:cx-G.cW*0.04, y:cy},               // high post
-  ];
-  const spot=offSpots[i%offSpots.length];
+  const n=G.teammates.length;
+  const spread=G.cH*0.68;
+  const step=n>1?spread/(n-1):0;
+  const spotY=(cy-(n-1)*step/2)+i*step;
+  const spotX=cx+G.cW*0.06;
   // Occasionally cut hard toward the hoop (give-and-go feel)
   const cutting=Math.random()<0.18;
-  const tgtX=cutting?G.hoop.away.x:spot.x;
-  const tgtY=cutting?G.hoop.away.y:spot.y;
+  const tgtX=cutting?G.hoop.away.x:spotX;
+  const tgtY=cutting?G.hoop.away.y:spotY;
   const dx=tgtX-tm.x, dy=tgtY-tm.y;
   const dist=Math.sqrt(dx*dx+dy*dy);
-  // Only move if not already at the spot
   if(dist>20){
     const spd=(tm.sprinting?tm.maxSpd:tm.speed)*(cutting?0.95:0.70);
     tm.vx=(dx/dist)*spd; tm.vy=(dy/dist)*spd;
   } else {
-    // Arrived — jitter slightly so they look alive
     tm.vx=(Math.random()-.5)*8; tm.vy=(Math.random()-.5)*8;
   }
 }
 
 function tmDefense(tm,i){
   // Man-mark: each teammate tracks a specific opponent
-  const markTarget=G.opponents[i]||G.opponents[0];
+  const markTarget=G.opponents[i % G.opponents.length]||G.opponents[0];
   const dx=markTarget.x-tm.x;
   const dy=markTarget.y-tm.y;
   const dist=Math.sqrt(dx*dx+dy*dy)||1;
@@ -616,38 +708,50 @@ function tmDefense(tm,i){
   const td=Math.sqrt(tdx*tdx+tdy*tdy)||1;
   tm.vx=(tdx/td)*spd*0.78; tm.vy=(tdy/td)*spd*0.78;
 
-  // STEAL — must be physically close to the ball carrier (<=52px)
+  // STEAL — must be physically close to the ball carrier (<=STEAL_RANGE)
   const carrierDist=Math.sqrt(d2(tm,carrier));
-  if(carrier.hasBall && carrierDist<=52 && Math.random()<TM_STEAL_CHANCE/22){
+  if(carrier.hasBall && carrierDist<=STEAL_RANGE && Math.random()<TM_STEAL_CHANCE*0.28){
     doTeammateSteal(tm,carrier);
     return;
   }
 
-  // BLOCK — must be close to the nearest opponent AND ball must be flying
+  // BLOCK — must be close to the mark AND ball is flying AND in the shot path
   const markDist=Math.sqrt(d2(tm,markTarget));
-  if(G.ball.flying && markDist<=60 && Math.random()<TM_BLOCK_CHANCE/45){
-    doTeammateBlock(tm);
+  if(G.ball.flying && markDist<=BLOCK_RANGE_DIST){
+    const ballDist=Math.sqrt((tm.x-G.ball.x)**2+(tm.y-G.ball.y)**2);
+    // Check tm is actually in the path between shooter and hoop
+    const hoop=G.hoop.away;
+    const shooter=G.opponents.find(o=>!o.hasBall&&G.poss==='away')||markTarget;
+    const sDX=hoop.x-shooter.x, sDY=hoop.y-shooter.y;
+    const sLen=Math.sqrt(sDX**2+sDY**2)||1;
+    const tmDX=tm.x-shooter.x, tmDY=tm.y-shooter.y;
+    const dot=(tmDX*sDX+tmDY*sDY)/sLen;
+    const inPath=dot>0&&dot<sLen;
+    if(inPath && ballDist<=BLOCK_BALL_RANGE && Math.random()<TM_BLOCK_CHANCE*0.25){
+      doTeammateBlock(tm);
+    }
   }
 }
 
 function doTeammateBlock(tm){
   if(!G.ball.flying) return;
-  // Proximity to the ball itself required
   const ballDist=Math.sqrt((tm.x-G.ball.x)**2+(tm.y-G.ball.y)**2);
-  if(ballDist>80) return;
+  if(ballDist>BLOCK_BALL_RANGE) return;
   const ok=Math.random()<TM_BLOCK_CHANCE;
   if(ok){
     G.ball.flying=false; G.ball.anim=null;
     tm.hasBall=true; G.ball.holder=tm; G.ball.x=tm.x; G.ball.y=tm.y;
     G.poss='home';
-    // Auto-switch player to this teammate so they can immediately run
+    // Switch player control to this teammate
     G.teammates.push(G.player);
     G.teammates.splice(G.teammates.indexOf(tm),1);
     G.player=tm;
     G.hs.blk++;
+    G.shotClock=SHOT_MAX; G.aiPossTime=0;
     showAction('TEAMMATE BLOCK! 🛡');
     doBlockFlash(); updatePossUI();
     G.as.to++;
+    // NO reposition
   }
 }
 
@@ -657,12 +761,15 @@ function doTeammateSteal(tm,opp){
     opp.hasBall=false; G.ball.holder=null;
     tm.hasBall=true; G.ball.holder=tm; G.ball.x=tm.x; G.ball.y=tm.y;
     G.poss='home'; G.hs.stl++;
+    G.ball.flying=false; G.ball.anim=null;
+    G.shotClock=SHOT_MAX; G.aiPossTime=0;
     showAction('TEAMMATE STEAL! 🦅');
     doBlockFlash(); updatePossUI();
+    // Switch control to this teammate
     G.teammates.push(G.player);
     G.teammates.splice(G.teammates.indexOf(tm),1);
     G.player=tm;
-    resetAfterScore();
+    // NO reposition — everyone stays where they are
   }
 }
 
@@ -702,40 +809,52 @@ function oppOffense(op){
   const hoop=G.hoop.home;
   const dx=hoop.x-op.x, dy=hoop.y-op.y;
   const dist=Math.sqrt(dx*dx+dy*dy);
-  const playerClose=d2(op,G.player)<55*55;
+  const playerClose=d2(op,G.player)<52*52;
+  const anyTeammateClose=G.teammates.some(t=>d2(op,t)<55*55);
   const spd=op.sprinting?op.maxSpd:op.speed;
 
-  // Shoot if in range
-  if(dist<G.cW*0.28&&Math.random()<0.40){ oppShoot(op); return; }
-  if(dist<G.cW*0.32&&!playerClose&&Math.random()<0.25){ oppShoot(op); return; }
+  // Pass out of pressure before shooting if heavily pressured
+  if(playerClose&&Math.random()<0.30){
+    const others=G.opponents.filter(o=>!o.hasBall);
+    const open=others.find(o=>d2(o,G.player)>80*80&&d2(o,G.player)<200*200);
+    if(open){ aiPass(op,open); G.aiPossTime=0; return; }
+  }
 
-  // Drive straight toward hoop; juke sideways if player is right on them
+  // Shoot if open or close enough
+  if(dist<G.cW*0.26&&!playerClose&&!anyTeammateClose&&Math.random()<0.50){ oppShoot(op); return; }
+  if(dist<G.cW*0.20&&Math.random()<0.60){ oppShoot(op); return; } // close layup
+  if(dist<G.cW*0.34&&!playerClose&&Math.random()<0.20){ oppShoot(op); return; } // mid-range
+
+  // Drive with smarter dodge
   let tx=hoop.x, ty=hoop.y;
   if(playerClose){
-    // Lateral dodge — pick the side that has more space
+    // Dodge: go around the player toward the open lane
     const perpX=-(G.player.y-op.y);
     const perpY= (G.player.x-op.x);
-    const pl=Math.sqrt(perpX*perpX+perpY*perpY)||1;
-    tx=op.x+(perpX/pl)*85;
-    ty=op.y+(perpY/pl)*85;
+    const pl=Math.sqrt(perpX**2+perpY**2)||1;
+    // Pick the perpendicular direction that gets closer to the hoop
+    const optA={x:op.x+perpX/pl*80, y:op.y+perpY/pl*80};
+    const optB={x:op.x-perpX/pl*80, y:op.y-perpY/pl*80};
+    const dA=(optA.x-hoop.x)**2+(optA.y-hoop.y)**2;
+    const dB=(optB.x-hoop.x)**2+(optB.y-hoop.y)**2;
+    const best=dA<dB?optA:optB;
+    tx=best.x; ty=best.y;
   }
   const dd=Math.sqrt((tx-op.x)**2+(ty-op.y)**2)||1;
   op.vx=(tx-op.x)/dd*spd; op.vy=(ty-op.y)/dd*spd;
 }
 
 function oppOffBall(op,i){
-  // Move to fixed wing spots so they don't orbit aimlessly
-  const cx=G.cX+G.cW/2, cy=G.cY+G.cH/2;
-  const defSpots=[
-    {x:G.cX+G.cW*0.68, y:G.cY+G.cH*0.18},
-    {x:G.cX+G.cW*0.68, y:G.cY+G.cH*0.82},
-    {x:G.cX+G.cW*0.54, y:cy},
-  ];
-  // Occasionally cut hard toward the hoop
+  // Generate evenly-spread spots based on team size
+  const cy=G.cY+G.cH/2;
+  const n=G.opponents.length;
+  const spread=G.cH*0.72;
+  const step=n>1?spread/(n-1):0;
+  const spotY=(cy-(n-1)*step/2)+i*step;
+  const spotX=G.cX+G.cW*0.64;
   const cutting=Math.random()<0.22;
-  const spot=defSpots[i%3];
-  const tgtX=cutting?G.hoop.home.x:spot.x;
-  const tgtY=cutting?G.hoop.home.y:spot.y;
+  const tgtX=cutting?G.hoop.home.x:spotX;
+  const tgtY=cutting?G.hoop.home.y:spotY;
   const dx=tgtX-op.x, dy=tgtY-op.y;
   const dist=Math.sqrt(dx*dx+dy*dy);
   const spd=op.sprinting?op.maxSpd:op.speed;
@@ -762,36 +881,44 @@ function oppDefend(op,i){
     op.vx*=0.5; op.vy*=0.5;
   }
 
-  // ── STEAL: must be within 50px of the player who has the ball ──
-  const STEAL_RANGE=50;
+  // ── STEAL: must be RIGHT next to the ball carrier ──
   if(G.player.hasBall && dist<=STEAL_RANGE){
-    // ~28% base chance per decision tick (not per frame), adjusted for stamina
-    const stealRoll=Math.random();
-    const stealThresh=OPP_STEAL_CHANCE*(op.stamina/100)*0.22;
-    if(stealRoll<stealThresh){
+    const stealThresh=OPP_STEAL_CHANCE*(op.stamina/100)*0.28; // boosted threshold
+    if(Math.random()<stealThresh){
       G.player.hasBall=false; op.hasBall=true; G.ball.holder=op;
+      G.ball.x=op.x; G.ball.y=op.y;
       G.poss='away'; G.as.stl++;
-      showAction('STOLEN! 😱'); updatePossUI(); resetAfterScore();
+      G.ball.flying=false; G.ball.anim=null;
+      G.shotClock=SHOT_MAX; G.aiPossTime=0;
+      showAction('STOLEN! 😱'); updatePossUI();
+      // NO reposition — play continues from where everyone is
       return;
     }
   }
 
-  // ── BLOCK: must be within 65px AND ball must be flying ──
-  // Blocks are harder than steals (lower chance, tighter range)
-  const BLOCK_RANGE=65;
-  if(G.ball.flying && dist<=BLOCK_RANGE){
-    // Also check distance to the ball itself
+  // ── BLOCK: defender must be very close to the PLAYER (not just the ball arc)
+  // and physically in the path between player and hoop ──
+  if(G.ball.flying && dist<=BLOCK_RANGE_DIST){
     const ballDist=Math.sqrt((op.x-G.ball.x)**2+(op.y-G.ball.y)**2);
-    if(ballDist<=72){
-      const blockRoll=Math.random();
-      const blockThresh=OPP_BLOCK_CHANCE*(op.stamina/100)*0.12; // harder than steal
-      if(blockRoll<blockThresh){
+    // Ensure blocker is actually between the shooter and where the ball is going
+    const hoop=G.hoop.home;
+    // Vector from player-to-hoop; check op is roughly along that path
+    const shootDX=hoop.x-G.player.x, shootDY=hoop.y-G.player.y;
+    const shootLen=Math.sqrt(shootDX**2+shootDY**2)||1;
+    const opDX=op.x-G.player.x, opDY=op.y-G.player.y;
+    // Dot product — positive means op is on the same side as the hoop
+    const dot=(opDX*shootDX+opDY*shootDY)/shootLen;
+    const inPath=dot>0 && dot<shootLen; // op is between shooter and hoop
+    if(inPath && ballDist<=BLOCK_BALL_RANGE){
+      const blockThresh=OPP_BLOCK_CHANCE*(op.stamina/100)*0.14;
+      if(Math.random()<blockThresh){
         G.ball.flying=false; G.ball.anim=null;
-        G.poss='away'; op.hasBall=true; G.ball.holder=op;
+        op.hasBall=true; G.ball.holder=op;
         G.ball.x=op.x; G.ball.y=op.y;
-        G.as.blk++;
+        G.poss='away'; G.as.blk++;
+        G.shotClock=SHOT_MAX; G.aiPossTime=0;
         showAction('SHOT BLOCKED! 🛡'); doBlockFlash(); updatePossUI();
-        resetAfterScore();
+        // NO reposition — play continues
       }
     }
   }
@@ -817,7 +944,14 @@ function oppShoot(op){
       showAction(isThree?'AI THREE! 🔥':'AI BUCKET!');
     } else {
       showAction(contested?'CONTESTED MISS 🛡':'AI MISSED');
-      G.poss='home'; resetAfterScore(); updatePossUI();
+      // Give ball to nearest home player without repositioning
+      G.poss='home';
+      const nearest=[G.player,...G.teammates].reduce((a,b)=>d2(a,G.ball)<d2(b,G.ball)?a:b);
+      nearest.hasBall=true; G.ball.holder=nearest;
+      G.ball.x=nearest.x; G.ball.y=nearest.y;
+      G.ball.flying=false; G.ball.anim=null;
+      G.shotClock=SHOT_MAX; G.aiPossTime=0;
+      updatePossUI();
     }
   });
 }
@@ -842,18 +976,41 @@ function doShoot(pow){
   const stat=G.poss==='home'?G.hs:G.as;
   stat.fga++; if(isThree) stat.tpa++;
 
-  // Window shrinks with distance
+  // Window shrinks significantly with distance
   const normDist=Math.min(dist/(G.cW*0.55),1);
-  const winSize=SHOOT_MAX_WIN-(SHOOT_MAX_WIN-SHOOT_MIN_WIN)*normDist;
+  const halfWin=SHOOT_MAX_WIN-(SHOOT_MAX_WIN-SHOOT_MIN_WIN)*normDist;
+  // halfWin is ~0.09 (close) down to ~0.03 (far) — very small window
 
   const diff=Math.abs(pow-SHOOT_IDEAL);
-  const inZone=diff<winSize;
-  const base=inZone?SHOOT_BASE_ACC:SHOOT_BASE_ACC*(1-diff*2.2);
-  const distP=normDist*0.34;
+  const inZone=diff<=halfWin;
+
+  let base;
+  if(inZone){
+    // Centrality bonus — dead center = 88%, edge of zone = 72%
+    const centrality=1-(diff/halfWin);
+    base=0.72+centrality*0.16; // 72–88% max inside green
+  } else {
+    // Outside zone: very steep falloff
+    const over=diff-halfWin;
+    base=Math.max(0.04, 0.55-over*4.5);
+  }
+
+  // HARD penalties — distance kills you
+  const distP = inZone ? normDist*0.18 : normDist*0.38;
+  const stamP = inZone ? (1-G.player.stamina/100)*0.10 : (1-G.player.stamina/100)*0.18;
+  // Defender pressure — big penalty for anyone close
   let defP=0;
-  G.opponents.forEach(op=>{ const dd=Math.sqrt(d2(op,G.player)); if(dd<45) defP+=0.22; else if(dd<78) defP+=0.11; });
-  const stamP=(1-G.player.stamina/100)*0.12;
-  const acc=Math.max(0.04,base-distP-defP-stamP);
+  G.opponents.forEach(op=>{
+    const dd=Math.sqrt(d2(op,G.player));
+    if(dd<38)      defP+=inZone?0.22:0.35;
+    else if(dd<60) defP+=inZone?0.12:0.20;
+    else if(dd<85) defP+=inZone?0.05:0.10;
+  });
+  // Is player moving? Extra penalty
+  const moving=Math.abs(G.player.vx)>20||Math.abs(G.player.vy)>20;
+  const moveP=moving?(inZone?0.10:0.20):0;
+
+  const acc=Math.max(0.03, base-distP-defP-stamP-moveP);
 
   G.player.hasBall=false; G.ball.holder=null;
   launchToPoint(G.player,hoop,()=>{
@@ -863,7 +1020,9 @@ function doShoot(pow){
       if(isThree){ startCeleb('3pt'); showAction('THREE! 🔥'); }
       else showAction('BUCKET! 💯');
     } else {
-      showAction(inZone?'UNLUCKY 😤':'MISSED 😬');
+      if(inZone) showAction('SO CLOSE 😤');
+      else if(defP>0.2) showAction('BLOCKED OUT! 🛡');
+      else showAction('MISSED 😬');
       turnover();
     }
   });
@@ -898,28 +1057,42 @@ function handleBlockSteal(){
   const cd=Math.sqrt(bd);
 
   if(best.hasBall){
-    if(cd>68){ showAction('TOO FAR 🚫'); return; }
+    if(cd>STEAL_RANGE){ showAction('TOO FAR TO STEAL 🚫'); return; }
     G.hs.stl++;
-    const ok=Math.random()<(0.24+(G.player.rating||80-70)/220-(1-G.player.stamina/100)*0.08);
+    const ok=Math.random()<0.42; // reasonable player steal chance
     if(ok){
       best.hasBall=false; G.ball.holder=null;
       G.player.hasBall=true; G.ball.holder=G.player;
-      G.poss='home';
+      G.ball.x=G.player.x; G.ball.y=G.player.y;
+      G.poss='home'; G.ball.flying=false; G.ball.anim=null;
+      G.shotClock=SHOT_MAX; G.aiPossTime=0;
       showAction('STEAL! 🦅'); doBlockFlash(); updatePossUI();
+      // NO reposition
     } else {
       showAction('MISSED STEAL 😤');
-      G.aScore+=1; G.as.fg++; updateHUD(); // foul
+      G.aScore+=1; G.as.fg++; updateHUD();
     }
   } else if(G.ball.flying){
-    if(cd>82){ showAction('OUT OF RANGE 🚫'); return; }
+    // Must be close to player AND in path between shooter and hoop
+    if(cd>BLOCK_RANGE_DIST){ showAction('NOT CLOSE ENOUGH 🚫'); return; }
+    // Check player is between shooter and hoop
+    const hoop=G.hoop.away; // player shoots at away hoop
+    const sDX=hoop.x-best.x, sDY=hoop.y-best.y;
+    const sLen=Math.sqrt(sDX**2+sDY**2)||1;
+    const pDX=G.player.x-best.x, pDY=G.player.y-best.y;
+    const dot=(pDX*sDX+pDY*sDY)/sLen;
+    const inPath=dot>0&&dot<sLen;
+    if(!inPath){ showAction('NOT IN FRONT 🚫'); return; }
     G.hs.blk++;
-    const ok=Math.random()<(0.45-cd/200);
+    const ok=Math.random()<(0.50-cd/160);
     if(ok){
       G.ball.flying=false; G.ball.anim=null;
       G.poss='home'; G.player.hasBall=true; G.ball.holder=G.player;
       G.ball.x=G.player.x; G.ball.y=G.player.y;
+      G.shotClock=SHOT_MAX; G.aiPossTime=0;
       showAction('BLOCKED! 🛡 GET OUT!');
       G.shakeF=10; doBlockFlash(); updatePossUI(); G.as.to++;
+      // NO reposition
     } else {
       showAction('COULDN\'T REACH 😤');
     }
@@ -1038,7 +1211,15 @@ function flash(sel,on,off,dur,fadeDur){
 function turnover(){
   const s=G.poss==='home'?G.hs:G.as; s.to++;
   G.poss=G.poss==='home'?'away':'home';
-  resetAfterScore(); updatePossUI();
+  // Don't reposition anyone — just hand ball to nearest player of the new possessing team
+  const newTeam=G.poss==='home'?[G.player,...G.teammates]:G.opponents;
+  let recv=newTeam[0];
+  newTeam.forEach(e=>{ if(d2(e,G.ball)<d2(recv,G.ball)) recv=e; });
+  recv.hasBall=true; G.ball.holder=recv;
+  G.ball.x=recv.x; G.ball.y=recv.y;
+  G.ball.flying=false; G.ball.anim=null;
+  G.aiPossTime=0; G.shotClock=SHOT_MAX;
+  updatePossUI();
 }
 function scorePoints(side,pts){
   if(side==='home') G.hScore+=pts; else G.aScore+=pts;
@@ -1047,24 +1228,42 @@ function scorePoints(side,pts){
 }
 function resetAfterScore(){
   const cx=G.cX+G.cW/2, cy=G.cY+G.cH/2;
+  const n=selMode;
+  const ch=G.cH;
   [...G.opponents,...G.teammates].forEach(e=>e.hasBall=false);
   G.player.hasBall=false;
-  if(G.poss==='home'){
-    G.player.x=cx-160; G.player.y=cy; G.player.hasBall=true; G.ball.holder=G.player;
-    G.teammates[0].x=cx-250; G.teammates[0].y=cy-105;
-    G.teammates[1].x=cx-250; G.teammates[1].y=cy+105;
-    G.opponents[0].x=cx+115; G.opponents[0].y=cy;
-    G.opponents[1].x=cx+195; G.opponents[1].y=cy-105;
-    G.opponents[2].x=cx+195; G.opponents[2].y=cy+105;
-  } else {
-    G.opponents[0].x=cx+160; G.opponents[0].y=cy;
-    G.opponents[0].hasBall=true; G.ball.holder=G.opponents[0];
-    G.opponents[1].x=cx+240; G.opponents[1].y=cy-105;
-    G.opponents[2].x=cx+240; G.opponents[2].y=cy+105;
-    G.player.x=cx-90; G.player.y=cy;
-    G.teammates[0].x=cx-195; G.teammates[0].y=cy-85;
-    G.teammates[1].x=cx-195; G.teammates[1].y=cy+85;
+
+  function placeHome(ents, startX, spread){
+    const total=ents.length;
+    ents.forEach((e,i)=>{
+      const step=total>1?(ch*spread)/(total-1):0;
+      const startY=cy-(total-1)*step/2;
+      e.x=startX; e.y=startY+i*step;
+    });
   }
+  function placeAway(ents, startX, spread){
+    const total=ents.length;
+    ents.forEach((e,i)=>{
+      const step=total>1?(ch*spread)/(total-1):0;
+      const startY=cy-(total-1)*step/2;
+      e.x=startX+(i*20); e.y=startY+i*step;
+    });
+  }
+
+  if(G.poss==='home'){
+    G.player.hasBall=true; G.ball.holder=G.player;
+    G.player.x=cx-155; G.player.y=cy;
+    placeHome(G.teammates, cx-240+(n>3?-30:0), 0.62);
+    placeAway(G.opponents, cx+110, 0.62);
+  } else {
+    G.opponents[0].hasBall=true; G.ball.holder=G.opponents[0];
+    G.opponents[0].x=cx+155; G.opponents[0].y=cy;
+    const rest=G.opponents.slice(1);
+    placeAway(rest, cx+235, 0.62);
+    G.player.x=cx-90; G.player.y=cy;
+    placeHome(G.teammates, cx-190, 0.62);
+  }
+
   G.ball.x=G.ball.holder.x; G.ball.y=G.ball.holder.y;
   G.ball.flying=false; G.ball.anim=null; G.aiPossTime=0; G.shotClock=SHOT_MAX;
 }
@@ -1334,35 +1533,61 @@ function drawBall(){
   ctx.beginPath(); ctx.moveTo(bx,by-r); ctx.quadraticCurveTo(bx-5,by,bx,by+r); ctx.stroke();
 }
 
-// ── Shoot meter — green zone shrinks with distance ──
+// ── Shoot meter — green zone shrinks with distance, centered on ideal ──
 function drawShootMeter(){
   if(!G.shooting||!G.player.hasBall) return;
-  const px=G.player.x, py=G.player.y-50, w=68, h=11;
+  const px=G.player.x, py=G.player.y-52, w=80, h=13;
   const hoop=G.poss==='home'?G.hoop.away:G.hoop.home;
-  const dx=hoop.x-G.player.x,dy=hoop.y-G.player.y;
+  const dx=hoop.x-G.player.x, dy=hoop.y-G.player.y;
   const dist=Math.sqrt(dx*dx+dy*dy);
   const normD=Math.min(dist/(G.cW*0.55),1);
-  const winSize=SHOOT_MAX_WIN-(SHOOT_MAX_WIN-SHOOT_MIN_WIN)*normD;
+  const halfWin=SHOOT_MAX_WIN-(SHOOT_MAX_WIN-SHOOT_MIN_WIN)*normD;
 
-  // Background zones
-  ctx.fillStyle='#222244'; ctx.fillRect(px-w/2,py,w*SHOOT_IDEAL,h);
-  ctx.fillStyle='#1a4a28'; ctx.fillRect(px-w/2+w*SHOOT_IDEAL,py,w*winSize*2,h);
-  ctx.fillStyle='#4a1a1a'; ctx.fillRect(px-w/2+w*SHOOT_IDEAL+w*winSize*2,py,w*(1-SHOOT_IDEAL-winSize*2),h);
+  // Zone starts and widths on the bar (0..1)
+  const greenStart=SHOOT_IDEAL-halfWin;
+  const greenWidth=halfWin*2;
 
-  // Cursor
-  const inZ=G.shootPow>SHOOT_IDEAL&&G.shootPow<(SHOOT_IDEAL+winSize*2);
-  ctx.fillStyle=inZ?'#ffffff':'rgba(255,255,255,.42)';
-  ctx.fillRect(px-w/2+G.shootPow*w-2,py-2,4,h+4);
+  // Draw background zones
+  ctx.fillStyle='#1a1a3a';
+  ctx.fillRect(px-w/2,py,w,h);
+  // Too early (left of green) — blue
+  ctx.fillStyle='#223355';
+  ctx.fillRect(px-w/2, py, w*greenStart, h);
+  // Green zone
+  ctx.fillStyle='#1a5530';
+  ctx.fillRect(px-w/2+w*greenStart, py, w*greenWidth, h);
+  // Too late (right of green) — red-brown
+  const afterGreen=greenStart+greenWidth;
+  ctx.fillStyle='#4a1515';
+  ctx.fillRect(px-w/2+w*afterGreen, py, w*(1-afterGreen), h);
 
-  // Green bracket
-  ctx.strokeStyle=inZ?'rgba(100,255,80,1)':'rgba(80,220,60,.85)';
-  ctx.lineWidth=1.5; ctx.strokeRect(px-w/2+w*SHOOT_IDEAL,py-1,w*winSize*2,h+2);
-  ctx.strokeStyle='rgba(255,255,255,.3)'; ctx.lineWidth=1; ctx.strokeRect(px-w/2,py,w,h);
+  // Bright green fill inside zone (gradient feel)
+  const grd=ctx.createLinearGradient(px-w/2+w*greenStart,py,px-w/2+w*(greenStart+greenWidth),py);
+  grd.addColorStop(0,'rgba(60,200,80,.25)'); grd.addColorStop(0.5,'rgba(60,255,100,.45)'); grd.addColorStop(1,'rgba(60,200,80,.25)');
+  ctx.fillStyle=grd;
+  ctx.fillRect(px-w/2+w*greenStart, py, w*greenWidth, h);
 
-  // Label
-  ctx.fillStyle='rgba(255,255,255,.8)'; ctx.font='9px Bebas Neue'; ctx.textAlign='center';
-  const pct=Math.round((1-normD)*100);
-  ctx.fillText(`HIT GREEN  (${pct}% RANGE WINDOW)`,px,py-4);
+  // Cursor line
+  const curX=px-w/2+G.shootPow*w;
+  const inZ=G.shootPow>=greenStart&&G.shootPow<=(greenStart+greenWidth);
+  ctx.fillStyle=inZ?'#ffffff':'rgba(255,200,100,.7)';
+  ctx.fillRect(curX-2, py-3, 4, h+6);
+
+  // Green bracket border — bright so player can clearly see it
+  ctx.strokeStyle=inZ?'#55ff66':'#33cc44';
+  ctx.lineWidth=2;
+  ctx.strokeRect(px-w/2+w*greenStart, py-1, w*greenWidth, h+2);
+
+  // Outer border
+  ctx.strokeStyle='rgba(255,255,255,.25)'; ctx.lineWidth=1;
+  ctx.strokeRect(px-w/2, py, w, h);
+
+  // Label with live accuracy estimate
+  const pct=Math.round(halfWin*2*100);
+  const nearDef=G.opponents.some(op=>Math.sqrt(d2(op,G.player))<50);
+  ctx.fillStyle=nearDef?'#ff6060':'rgba(255,255,255,.85)';
+  ctx.font='bold 10px Bebas Neue'; ctx.textAlign='center';
+  ctx.fillText(`RELEASE IN GREEN  [${pct}% WINDOW]${nearDef?' — DEFENDER NEARBY!':''}`, px, py-5);
   ctx.textAlign='left';
 }
 
